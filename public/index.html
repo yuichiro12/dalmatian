@@ -5,39 +5,73 @@
     <title>Document</title>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.11.5/paper-full.min.js"></script>
 	<script type="text/paperscript" canvas="graphCanvas">
-	 var GraphPath;
+	 var Edge = null;
 	 var Start;
 	 var End;
+	 var NodeDefaultRadius = 7;
+	 var NodeDefaultColor = '#009dec';
+	 var EdgeDefaultColor = 'black';
+	 var ArrowTopDefaultWidth = 4;
+	 var ArrowTopDefaultHeight = 11;
+	 var ArrowTopDefaultColor = 'black';
+	 var Nodes = [];
+	 var Edges = [];
 
 	 function onMouseDown(event) {
-	   Start = event.point;
-	   GraphPath = new Path();
-	   GraphPath.strokeColor = 'black';
-	   GraphPath.add(Start);
-	   newNode(Start)
+	   var node = OnNode(event.point);
+	   if (node) {
+		 Start = node.point;
+		 Edge = new Path();
+		 Edge.strokeColor = EdgeDefaultColor;
+		 Edge.add(Start);
+	   } else {
+		 node = newNode(event.point);
+		 Nodes.push({path: node, point: event.point, radius: NodeDefaultRadius});
+	   }
+	 }
+
+	 function OnNode(point) {
+	   return Nodes.find(function(node) {
+		 return point.isClose(node.point, node.radius);
+	   });
+	 }
+
+	 function OnSameNodes(point1, point2) {
+	   return Nodes.find(function(node) {
+		 return point1.isClose(node.point, node.radius) && point2.isClose(node.point, node.radius);
+	   });
 	 }
 
 	 function onMouseUp(event) {
-	   End = event.point;
-	   GraphPath.add(End);
-	   var vec = End - Start
-	   var arrowTopBasePoint = (End - vec.normalize(12));
-	   var arrowTop = newArrowTop(arrowTopBasePoint);
-	   newNode(End)
+	   var node = OnNode(event.point);
+	   if (node && Edge && !OnSameNodes(Start, event.point)) {
+		 End = node.point;
+		 newEdge(Start, End);
+	   }
+	   Edge = null;
 	 }
 
 	 function newNode(point) {
 	   return new Path.Circle({
 		 center: point,
-		 radius: 5,
-		 fillColor: '#009dec'
-	   })
+		 radius: NodeDefaultRadius,
+		 fillColor: NodeDefaultColor
+	   });
+	 }
+
+	 function newEdge(start, end) {
+	   Edge.add(end);
+	   Edge.sendToBack();
+	   var arrowTopBasePoint = (end - (end - start).normalize(NodeDefaultRadius + ArrowTopDefaultHeight - 2));
+	   var arrowTop = newArrowTop(arrowTopBasePoint);
+	   arrowTop.sendToBack();
+	   arrowTop.insertAbove(Edge);
 	 }
 
 	 function newArrowTop(point) {
 	   var path = new Path({
-		 segments: [point + [0, -3], point + [0, 3], point + [10, 0]],
-		 fillColor: 'black',
+		 segments: [point + [0, -ArrowTopDefaultWidth], point + [0, ArrowTopDefaultWidth], point + [ArrowTopDefaultHeight, 0]],
+		 fillColor: ArrowTopDefaultColor,
 		 closed: true
 	   });
 	   path.rotate(getRotateAngleForArrowTop(Start, End), point);
